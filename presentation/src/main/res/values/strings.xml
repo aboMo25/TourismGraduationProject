@@ -1,0 +1,13 @@
+<resources>
+    <string name="loading">Loading…</string>
+    <string name="alread_have_an_account">Already have an account? Login</string>
+    <string name="password">Password</string>
+    <string name="email">Email</string>
+    <string name="name">Name</string>
+    <string name="login">Login</string>
+    <string name="dont_have_account">Don\'t have an account? Register</string>
+    <string name="app_name">Shopper\n</string>
+    <string name="register">Register\n\t</string>
+    <string name="welcome">Welcome</string>
+    <string name="default_web_client_id">659100255594-jj6cujp44vfvrhcvaa605vvp2jfike7j.apps.googleusercontent.com</string>
+</resources>
