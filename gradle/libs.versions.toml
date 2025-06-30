@@ -38,6 +38,12 @@ navigationCompose = "2.8.7"
 navigationRuntimeAndroid = "2.9.0-alpha06"
 navigationRuntimeKtx = "2.8.7"
 constraintlayout = "2.2.0"
+volley = "1.2.1"
+toolsCore = "1.0.0-alpha12"
+protoliteWellKnownTypes = "18.0.1"
+firebaseAppdistributionGradle = "5.1.1"
+credentials = "1.5.0"
+protoliteWellKnownTypesVersion = "18.0.1"
 
 
 [libraries]
@@ -97,6 +103,12 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-navigation-runtime-android = { group = "androidx.navigation", name = "navigation-runtime-android", version.ref = "navigationRuntimeAndroid" }
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
+androidx-tools-core = { group = "androidx.privacysandbox.tools", name = "tools-core", version.ref = "toolsCore" }
+#protolite-well-known-types = { group = "com.google.firebase", name = "protolite-well-known-types", version.ref = "protoliteWellKnownTypes" }
+firebase-appdistribution-gradle = { group = "com.google.firebase", name = "firebase-appdistribution-gradle", version.ref = "firebaseAppdistributionGradle" }
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
+protolite-well-known-types = { group = "com.google.firebase", name = "protolite-well-known-types", version.ref = "protoliteWellKnownTypesVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

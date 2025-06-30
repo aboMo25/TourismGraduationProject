@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.tourismgraduationproject.R
+import com.navigation.LoginScreen
+import com.navigation.ProfileScreen
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -59,17 +61,23 @@ fun ProfileScreen(
 	viewModel: ProfileScreenViewModel = koinViewModel(),
 ) {
 	val scrollState = rememberScrollState()
-
+	fun handleLogout() {
+		viewModel.logoutUser()
+		navController.navigate(LoginScreen) {
+			popUpTo(ProfileScreen) { inclusive = true }
+		}
+	}
 	Column(
 		modifier = Modifier
 			.fillMaxSize()
+			.background(Color.White)
 			.verticalScroll(scrollState)
-			.background(Color(0xFFF5E1C0))
 	) {
 		// Profile Section
 		Column(
 			modifier = Modifier
 				.fillMaxWidth()
+				.background(Color.White)
 //				.offset(y = (-50).dp)
 				.padding(32.dp),
 			horizontalAlignment = Alignment.CenterHorizontally
@@ -93,7 +101,7 @@ fun ProfileScreen(
 
 			// Basic Information
 			Text(
-				color = Color(0xFFE65100),
+				color = Color(0xFF000000),
 				text = "Abdel-Rahman Mohamed",
 				fontSize = 24.sp,
 				fontWeight = FontWeight.Bold
@@ -104,11 +112,11 @@ fun ProfileScreen(
 				Icon(
 					imageVector = Icons.Default.Email,
 					contentDescription = "Email",
-					tint = Color(0xFFE65100).copy(.7f)
+					tint = Color(0xFF000000).copy(.7f)
 				)
 				Spacer(modifier = Modifier.width(8.dp))
 				Text(
-					text = "abdo@gmail.com", color = Color(0xFFE65100),
+					text = "abdo@gmail.com", color = Color(0xFF000000),
 				)
 			}
 			Spacer(modifier = Modifier.height(8.dp))
@@ -117,17 +125,17 @@ fun ProfileScreen(
 				modifier = Modifier
 					.width(220.dp),
 				shape = RoundedCornerShape(16.dp),
-				colors = ButtonDefaults.buttonColors(Color(0xFFE65100)),
+				colors = ButtonDefaults.buttonColors(Color(0xFF4FC3F7)),
 				elevation = ButtonDefaults.buttonElevation(
 					defaultElevation = 6.dp,
 					pressedElevation = 8.dp
 				)
 			) {
 				Text(
-					color = Color(0xFFF5E1C0),
+					color = Color(0xFF000000),
 					text = "View Profile",
 					style = MaterialTheme.typography.titleMedium.copy(
-						color = Color(0xFFF5E1C0), // Explicitly setting text color
+						color = Color(0xFF000000), // Explicitly setting text color
 						shadow = Shadow(
 							color = Color.Black.copy(alpha = 0.25f),
 							blurRadius = 4f
@@ -141,7 +149,7 @@ fun ProfileScreen(
 		Text(
 			text = "Profile Settings",
 			fontSize = 16.sp,
-			color = Color(0xFFE65100),
+			color = Color(0xFF000000),
 			modifier = Modifier.padding(8.dp)
 		)
 		Spacer(modifier = Modifier.height(8.dp))
@@ -156,7 +164,7 @@ fun ProfileScreen(
 		Text(
 			text = "Account Information",
 			fontSize = 16.sp,
-			color = Color(0xFFE65100),
+			color = Color(0xFF000000),
 			modifier = Modifier.padding(8.dp)
 		)
 		ProfileSettingsItem(title = "Change Email", icon = Icons.Default.Email)
@@ -164,7 +172,7 @@ fun ProfileScreen(
 		ProfileSettingsItem(title = "Change Password", icon = Icons.Default.Lock)
 		Spacer(modifier = Modifier.height(24.dp))
 		Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-			ButtonDesign(text = "Logout", onClick = {})
+			ButtonDesign(text = "Logout", onClick =  { handleLogout() })
 		}
 
 
@@ -190,15 +198,15 @@ fun ProfileSettingsItem(
 				modifier = Modifier
 					.size(42.dp)
 					.clip(CircleShape)
-					.background(Color(0xFFE65100).copy(alpha = 0.3f))
+					.background(Color(0xFFF8F8F8).copy(alpha = 0.3f))
 					.padding(8.dp),
-				tint = Color(0xFFE65100).copy(.7f),
+				tint = Color(0xFF000000).copy(.7f),
 				imageVector = icon,
 				contentDescription = "Personal",
 			)
 			Spacer(modifier = Modifier.width(8.dp)) // Gap between icon and text
 			Text(
-				color = Color(0xFFE65100),
+				color = Color(0xFF000000),
 				text = title,
 				fontSize = 16.sp,
 				fontWeight = FontWeight.Bold,
@@ -207,7 +215,7 @@ fun ProfileSettingsItem(
 			)
 			Icon(
 				modifier = Modifier.padding(horizontal = 16.dp),
-				tint = Color(0xFFE65100).copy(.7f),
+				tint = Color(0xFF4FC3F7).copy(.7f),
 				imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
 				contentDescription = "Personal",
 			)
@@ -225,7 +233,7 @@ fun ButtonDesign(
 	Button(
 		onClick = onClick,
 		modifier = Modifier.width(320.dp).padding(bottom = 16.dp),
-		colors = ButtonDefaults.buttonColors(Color(0xFFE65100)),
+		colors = ButtonDefaults.buttonColors(Color(0xFF4FC3F7)),
 		shape = RoundedCornerShape(16.dp),
 		elevation = ButtonDefaults.buttonElevation(
 			defaultElevation = 6.dp,
@@ -235,7 +243,7 @@ fun ButtonDesign(
 		Text(
 			text = text,
 			style = MaterialTheme.typography.titleMedium.copy(
-				color = Color(0xFFF5E1C0), // Explicitly setting text color
+				color = Color(0xFFFFFFFF), // Explicitly setting text color
 				shadow = Shadow(
 					color = Color.Black.copy(alpha = 0.25f),
 					blurRadius = 4f

@@ -13,6 +13,25 @@ android {
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 		consumerProguardFiles("consumer-rules.pro")
 	}
+	packaging {
+		resources {
+			excludes += setOf(
+				"META-INF/INDEX.LIST",
+				"META-INF/DEPENDENCIES",
+				"META-INF/LICENSE",
+				"META-INF/LICENSE.txt",
+				"META-INF/NOTICE",
+				"META-INF/NOTICE.txt",
+				"META-INF/DEPENDENCIES",
+				"META-INF/LICENSE",
+				"META-INF/LICENSE.txt",
+				"META-INF/NOTICE",
+				"META-INF/NOTICE.txt",
+				"META-INF/INDEX.LIST",
+				"META-INF/io.netty.versions.properties"
+			)
+		}
+	}
 
 	buildTypes {
 		release {
@@ -30,6 +49,7 @@ android {
 	kotlinOptions {
 		jvmTarget = "11"
 	}
+
 }
 
 dependencies {
@@ -40,6 +60,8 @@ dependencies {
 	implementation(libs.play.services.tasks)
 	implementation(libs.play.services.base)
 	implementation(libs.play.services.base)
+	implementation(libs.androidx.credentials)
+//	implementation(libs.protolite.well.known.types)
 	testImplementation(libs.junit)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
@@ -50,5 +72,7 @@ dependencies {
 //	implementation "io.insert-koin:koin-android:$koin_version"
 	implementation ("io.insert-koin:koin-core:3.5.0")
 	testImplementation ("io.insert-koin:koin-test:3.5.0")
+	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+	implementation("com.squareup.retrofit2:retrofit:2.9.0")
 
 }

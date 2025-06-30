@@ -1,11 +1,9 @@
 package com.ui.feature.splash
 
-import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +26,7 @@ import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.domain.model.SplashScreenData
 import com.navigation.LoginScreen
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
@@ -37,13 +36,10 @@ fun SplashScreen(
 	navController: NavController,
 	viewModel: SplashViewModel = koinViewModel()
 ) {
-	val currentIndex by viewModel.currentIndex.collectAsState()
-	val currentSplashData by viewModel.currentSplashData.collectAsState()
-	val shouldNavigateToLogin by viewModel.shouldNavigateToLogin.collectAsState()
+	val uiState by viewModel.uiState.collectAsState()
 
-
-	LaunchedEffect(shouldNavigateToLogin) {
-		if (shouldNavigateToLogin) {
+	LaunchedEffect(uiState) {
+		if (uiState is SplashUiState.Success && (uiState as SplashUiState.Success).shouldNavigate) {
 			navController.navigate(LoginScreen) {
 				popUpTo(LoginScreen) { inclusive = true }
 			}
@@ -51,11 +47,41 @@ fun SplashScreen(
 		}
 	}
 
+	when (val state = uiState) {
+		is SplashUiState.Loading -> LoadingView()
+		is SplashUiState.Error -> ErrorView(message = state.message)
+		is SplashUiState.Success -> {
+			SplashContentWithNavigation(
+				currentScreen = state.currentScreen,
+				currentIndex = state.currentIndex,
+				totalScreens = state.totalScreens,
+				onNextClick = { viewModel.onNextClicked() },
+				onSkipClick = {
+					navController.navigate(LoginScreen) {
+						popUpTo(LoginScreen) { inclusive = true }
+					}
+				},
+				navController = navController
+			)
+		}
+	}
+}
+
+@Composable
+private fun SplashContentWithNavigation(
+	currentScreen: SplashScreenData,
+	currentIndex: Int,
+	totalScreens: Int,
+	onNextClick: () -> Unit,
+	onSkipClick: () -> Unit,
+	navController: NavController
+) {
 	Box(modifier = Modifier.fillMaxSize()) {
+
 		// Background Image
 		AsyncImage(
 			model = ImageRequest.Builder(LocalContext.current)
-				.data(currentSplashData.image)
+				.data(currentScreen.image)
 				.crossfade(true)
 				.memoryCachePolicy(CachePolicy.ENABLED)
 				.diskCachePolicy(CachePolicy.ENABLED)
@@ -65,13 +91,13 @@ fun SplashScreen(
 			contentScale = ContentScale.Crop
 		)
 
-		// Gradient overlay
+		// Gradient Overlay
 		Box(
 			modifier = Modifier
 				.fillMaxSize()
 				.background(
 					Brush.verticalGradient(
-						colors = listOf(
+						listOf(
 							Color.Black.copy(alpha = 0.3f),
 							Color.Black.copy(alpha = 0.7f)
 						)
@@ -79,138 +105,145 @@ fun SplashScreen(
 				)
 		)
 
-		// Content
-		SplashContent(
-			splashScreenData = currentSplashData,
-			modifier = Modifier.fillMaxSize()
-		)
-
-		// Skip button
-		if (currentIndex < 2) {
+		// Skip Button
+		if (currentIndex < totalScreens - 1) {
 			SkipButton(
-				onSkipClick = {
-					navController.navigate(LoginScreen) {
-						popUpTo(LoginScreen) { inclusive = true }
-					}
-				},
+				onSkipClick = onSkipClick,
 				modifier = Modifier
 					.align(Alignment.TopEnd)
-					.padding(24.dp)
+					.padding(16.dp)
 			)
 		}
 
+		// Main Content
 		Column(
 			modifier = Modifier
-				.align(Alignment.BottomCenter)
-				.padding(bottom = 32.dp)
+				.fillMaxSize()
+				.padding(horizontal = 24.dp),
+			verticalArrangement = Arrangement.SpaceBetween,
+			horizontalAlignment = Alignment.CenterHorizontally
 		) {
-			// Screen Indicators
-			Row(
-				modifier = Modifier
-					.padding(bottom = 24.dp)
-					.fillMaxWidth(),
-				horizontalArrangement = Arrangement.Center
-			) {
-				repeat(3) { index ->
-					Box(
-						modifier = Modifier
-							.padding(horizontal = 4.dp)
-							.size(if (currentIndex == index) 10.dp else 8.dp)
-							.clip(CircleShape)
-							.background(
-								if (currentIndex == index)
-									Color(0xFFE65100)
-								else
-									Color.White.copy(alpha = 0.5f)
-							)
-					)
-				}
-			}
+			Spacer(modifier = Modifier.height(48.dp)) // Optional Top Spacer
 
-			// Next button
-			NextButton(
-				onNext = { viewModel.onNextClicked() },
-				isLastScreen = currentIndex == 2,
-				modifier = Modifier.padding(horizontal = 32.dp)
-			)
+			SplashContent(splashScreen = currentScreen)
+
+			Column(
+				modifier = Modifier.fillMaxWidth(),
+				horizontalAlignment = Alignment.CenterHorizontally
+			) {
+				// Indicators
+				Row(
+					modifier = Modifier.padding(bottom = 16.dp),
+					horizontalArrangement = Arrangement.Center
+				) {
+					repeat(totalScreens) { index ->
+						Box(
+							modifier = Modifier
+								.padding(horizontal = 4.dp)
+								.size(12.dp)
+								.clip(RoundedCornerShape(32.dp))
+								.background(
+									if (index == currentIndex)
+										Color(0xFFE65100)
+									else
+										Color.White.copy(alpha = 0.5f)
+								)
+						)
+					}
+				}
+
+				NextButton(
+					onNext = onNextClick,
+					isLastScreen = currentIndex == totalScreens - 1,
+					modifier = Modifier.fillMaxWidth()
+				)
+			}
 		}
 	}
 }
 
 
-
 @Composable
-fun SplashContent(
-	splashScreenData: SplashScreenData,
-	modifier: Modifier = Modifier
-) {
+private fun SplashContent(splashScreen: SplashScreenData) {
 	var isVisible by remember { mutableStateOf(false) }
 
 	LaunchedEffect(Unit) {
 		delay(500)
 		isVisible = true
 	}
-	Box(
-		modifier = modifier
-			.fillMaxSize()
-			.padding(24.dp),
-		contentAlignment = Alignment.Center // Centers content inside Box
-	) {
-		Text(
-			text = "Automated Tourism",
-			style = MaterialTheme.typography.headlineLarge,
-			color = Color(0xFFE65100),
-			textAlign = TextAlign.Center,
-			modifier = Modifier.padding(horizontal = 16.dp)
-		)
-	}
 
-	Box(
-		modifier = modifier
-			.fillMaxSize()
-			.padding(24.dp),
-		contentAlignment = Alignment.Center
+	AnimatedVisibility(
+		visible = isVisible,
+		enter = fadeIn() + slideInVertically()
 	) {
 		Column(
 			horizontalAlignment = Alignment.CenterHorizontally,
-			verticalArrangement = Arrangement.Bottom,
+			verticalArrangement = Arrangement.spacedBy(12.dp),
 			modifier = Modifier
-				.fillMaxSize()
-				.padding(bottom = 160.dp)
+				.clip(RoundedCornerShape(16.dp))
+				.background(Color(0xFFF5E1C0).copy(alpha = 0.85f))
+				.padding(24.dp)
+				.fillMaxWidth()
 		) {
-			AnimatedVisibility(
-				visible = isVisible,
-				enter = fadeIn() + slideInVertically()
-			) {
-				Column(
-					horizontalAlignment = Alignment.CenterHorizontally,
-					modifier = Modifier
-						.clip(RoundedCornerShape(16.dp))
-						.background(Color(0xFFF5E1C0).copy(alpha = 0.8f)) // Sand color background
-						.padding(24.dp)
-				) {
-					Text(
-						text = splashScreenData.title,
-						style = MaterialTheme.typography.headlineMedium,
-						fontWeight = FontWeight.Bold,
-						color = Color(0xFF6D4C41),
-						textAlign = TextAlign.Center,
-						modifier = Modifier.padding(horizontal = 16.dp)
-					)
-					Spacer(modifier = Modifier.height(12.dp))
-					Text(
-						text = splashScreenData.description,
-						style = MaterialTheme.typography.bodyLarge,
-						color = Color(0xFF6D4C41),
-						textAlign = TextAlign.Center,
-						modifier = Modifier.padding(horizontal = 16.dp)
-					)
-				}
-			}
+			Text(
+				text = "Automated Tourism",
+				style = MaterialTheme.typography.headlineMedium,
+				color = Color(0xFFE65100),
+				textAlign = TextAlign.Center
+			)
+			Text(
+				text = splashScreen.title,
+				style = MaterialTheme.typography.headlineSmall,
+				fontWeight = FontWeight.Bold,
+				color = Color(0xFF6D4C41),
+				textAlign = TextAlign.Center
+			)
+			Text(
+				text = splashScreen.description,
+				style = MaterialTheme.typography.bodyLarge,
+				color = Color(0xFF6D4C41),
+				textAlign = TextAlign.Center
+			)
 		}
 	}
 }
 
+
+@Composable
+private fun LoadingView() {
+	Box(
+		modifier = Modifier.fillMaxSize(),
+		contentAlignment = Alignment.Center
+	) {
+		CircularProgressIndicator(color = Color(0xFFE65100))
+	}
+}
+
+@Composable
+private fun ErrorView(message: String) {
+	Box(
+		modifier = Modifier.fillMaxSize(),
+		contentAlignment = Alignment.Center
+	) {
+		Column(
+			horizontalAlignment = Alignment.CenterHorizontally,
+			modifier = Modifier.padding(24.dp)
+		) {
+			Text(
+				text = "Error",
+				style = MaterialTheme.typography.headlineMedium,
+				color = Color(0xFFE65100)
+			)
+			Spacer(modifier = Modifier.height(16.dp))
+			Text(
+				text = message,
+				style = MaterialTheme.typography.bodyLarge,
+				color = Color.White,
+				textAlign = TextAlign.Center
+			)
+		}
+	}
+}
 @Composable
 fun NextButton(
 	onNext: () -> Unit,
@@ -287,13 +320,4 @@ fun SkipButton(
 			)
 		}
 	}
-}
-
-@Composable
-@Preview
-fun SplashScreenPreview() {
-	val navController = rememberNavController()
-    val viewModel = SplashViewModel()
-
-    SplashScreen(navController, viewModel)
 }

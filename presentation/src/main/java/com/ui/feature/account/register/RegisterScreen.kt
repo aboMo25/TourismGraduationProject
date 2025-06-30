@@ -1,5 +1,6 @@
 package com.ui.feature.account.register
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +29,7 @@ import com.example.tourismgraduationproject.R
 import com.navigation.HomeScreen
 import com.util.AuthResultContract
 import org.koin.androidx.compose.koinViewModel
+import com.google.android.gms.common.api.ApiException // Import ApiException for error handling
 
 @Composable
 fun RegisterScreen(
@@ -35,32 +38,44 @@ fun RegisterScreen(
 ) {
 	RegisterScreenContent(
 		navController = navController,
-        viewModel = viewModel
+		viewModel = viewModel
 	)
 }
 
 @Composable
 fun RegisterScreenContent(
 	navController: NavController,
-	viewModel: RegisterViewModel = koinViewModel(),
+	viewModel: RegisterViewModel, // ViewModel is already koinViewModel() in RegisterScreen
 ) {
 	val registerState = viewModel.registerState.collectAsState()
+	val context = LocalContext.current // Get context for Toast
+
 	val launcher = rememberLauncherForActivityResult(
 		contract = AuthResultContract(viewModel.getGoogleSignInClient())
 	) { task ->
-		viewModel.handleGoogleSignInResult(task?.result)
+		// Handle the result from the AuthResultContract
+		try {
+			val account = task?.getResult(ApiException::class.java)
+//			viewModel.handleGoogleSignInResult(account)
+		} catch (e: ApiException) {
+			// This catches errors specific to Google Sign-In before backend authentication
+			viewModel.registerState.value = RegisterState.Error("Google Sign-In failed: ${e.statusCode}")
+		} catch (e: Exception) {
+			// Catch any other unexpected exceptions
+			viewModel.registerState.value = RegisterState.Error("An unexpected error occurred during Google Sign-In.")
+		}
 	}
-		Box(
-		modifier = Modifier.fillMaxSize()
-	) {
+
+	Box(modifier = Modifier.fillMaxSize()) {
 		// Background Image
 		Image(
 			painter = painterResource(id = R.drawable.login),
-			contentDescription = "Egypt Background",
+			contentDescription = null,
 			modifier = Modifier.fillMaxSize(),
-			contentScale = ContentScale.FillBounds
+			contentScale = ContentScale.Crop
 		)
-		// Gradient overlay
+
+		// Gradient Overlay
 		Box(
 			modifier = Modifier
 				.fillMaxSize()
@@ -74,67 +89,68 @@ fun RegisterScreenContent(
 				)
 		)
 
-		// Content
+		// Main Content
 		Box(
-			modifier = Modifier.fillMaxSize(),
+			modifier = Modifier
+				.fillMaxSize()
+				.padding(16.dp),
 			contentAlignment = Alignment.Center
 		) {
-			Column(
+			Surface(
+				shape = RoundedCornerShape(24.dp),
+				color = Color.White.copy(alpha = 0.85f),
 				modifier = Modifier
-					.fillMaxWidth(0.9f)
-					.clip(RoundedCornerShape(24.dp))
-//                    .background(Color.White.copy(alpha = 0.4f))
-//                    .background(Color.White.copy(alpha = 0.9f))
-//                    .background(Color.Black.copy(alpha = 0.4f))
-					.background(Color(0xFFF5E1C0).copy(alpha = 0.8f)) // Sand color background
-					.padding(24.dp),
-				verticalArrangement = Arrangement.Center,
-				horizontalAlignment = Alignment.CenterHorizontally
+					.fillMaxWidth()
+					.wrapContentHeight()
 			) {
-				when (val state = registerState.value) {
-					is RegisterState.Success -> {
-						LaunchedEffect(registerState.value) {
-							navController.navigate(HomeScreen) {
-								popUpTo(HomeScreen) { inclusive = true }
+				Column(
+					modifier = Modifier
+						.padding(24.dp)
+						.fillMaxWidth(),
+					verticalArrangement = Arrangement.spacedBy(16.dp),
+					horizontalAlignment = Alignment.CenterHorizontally
+				) {
+					when (val state = registerState.value) {
+						is RegisterState.Loading -> {
+							CircularProgressIndicator(color = Color(0xFFE65100))
+							Text(text = stringResource(id = R.string.loading))
+						}
+						is RegisterState.Error -> {
+							Text(
+								text = state.message,
+								color = Color.Red,
+								textAlign = TextAlign.Center
+							)
+							// --- ADDED: Reset state after showing error ---
+							LaunchedEffect(state.message) {
+								Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+								viewModel.resetRegisterState()
+							}
+							// ---------------------------------------------
+						}
+						is RegisterState.Success -> {
+							LaunchedEffect(state) {
+								navController.navigate(HomeScreen) {
+									popUpTo(HomeScreen) { inclusive = true }
+								}
 							}
 						}
-					}
-
-					is RegisterState.Error -> {
-						Text(
-							text = state.message,
-							color = Color.Red
-						)
-					}
-
-					is RegisterState.Loading -> {
-						CircularProgressIndicator(color = Color(0xFFE65100))
-						Spacer(modifier = Modifier.height(8.dp))
-						Text(text = stringResource(id = R.string.loading))
-					}
-
-					else -> {
-						RegisterContent(
-							onRegisterClicked = { email, password, name ->
-								viewModel.register(
-									email = email,
-									password = password,
-									name = name
-								)
-							},
-							onSignInClick = {
-								navController.popBackStack()
-							},
-							onGoogleSignInClicked = {
-								launcher.launch(0)
-							}
-						)
+						else -> { // RegisterState.Idle
+							RegisterContent(
+								onRegisterClicked = { email, password, name ->
+									viewModel.register(email, password, name)
+								},
+								onSignInClick = { navController.popBackStack() },
+								onGoogleSignInClicked = { launcher.launch(0) } // Trigger the Google Sign-In flow
+							)
+						}
 					}
 				}
 			}
 		}
 	}
 }
+
 
 @Composable
 fun RegisterContent(
@@ -151,112 +167,74 @@ fun RegisterContent(
 
 	Column(
 		modifier = Modifier.fillMaxWidth(),
-		verticalArrangement = Arrangement.Center,
+		verticalArrangement = Arrangement.spacedBy(16.dp),
 		horizontalAlignment = Alignment.CenterHorizontally
-
 	) {
 		Text(
 			text = "WELCOME",
-			style = MaterialTheme.typography.headlineLarge,
+			style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp),
 			fontWeight = FontWeight.Bold,
-			color = Color(0xFFE65100),
-			fontSize = 32.sp
+			color = Color.Black
 		)
-
-		Spacer(modifier = Modifier.height(8.dp))
 
 		Text(
 			text = "Create your account",
 			style = MaterialTheme.typography.bodyLarge,
-			color = Color(0xFF5D4037),
+			color = Color.Gray,
 			textAlign = TextAlign.Center
 		)
-
-		Spacer(modifier = Modifier.height(24.dp))
 
 		OutlinedTextField(
 			value = name.value,
 			onValueChange = { name.value = it },
-			modifier = Modifier
-				.fillMaxWidth()
-				.padding(vertical = 8.dp)
-				.clip(RoundedCornerShape(12.dp)),
-			label = { Text(text = stringResource(id = R.string.name)) },
-			colors = OutlinedTextFieldDefaults.colors(
-				focusedBorderColor = Color(0xFF8D6E63),
-				focusedLabelColor = Color(0xFF8D6E63)
-			),
+			modifier = Modifier.fillMaxWidth(),
+			label = { Text(stringResource(id = R.string.name)) },
 			singleLine = true
 		)
 
 		OutlinedTextField(
 			value = email.value,
 			onValueChange = { email.value = it },
-			modifier = Modifier
-				.fillMaxWidth()
-				.padding(vertical = 8.dp)
-				.clip(RoundedCornerShape(12.dp)),
-			label = { Text(text = stringResource(id = R.string.email)) },
-			colors = OutlinedTextFieldDefaults.colors(
-				focusedBorderColor = Color(0xFF8D6E63),
-				focusedLabelColor = Color(0xFF8D6E63)
-			),
+			modifier = Modifier.fillMaxWidth(),
+			label = { Text(stringResource(id = R.string.email)) },
 			singleLine = true
 		)
 
 		OutlinedTextField(
 			value = password.value,
 			onValueChange = { password.value = it },
-			modifier = Modifier
-				.fillMaxWidth()
-				.padding(vertical = 8.dp)
-				.clip(RoundedCornerShape(12.dp)),
-			label = { Text(text = stringResource(id = R.string.password)) },
-			colors = OutlinedTextFieldDefaults.colors(
-				focusedBorderColor = Color(0xFF8D6E63),
-				focusedLabelColor = Color(0xFF8D6E63)
-			),
+			modifier = Modifier.fillMaxWidth(),
+			label = { Text(stringResource(id = R.string.password)) },
+			singleLine = true,
 			visualTransformation = if (passwordVisibility.value) VisualTransformation.None else PasswordVisualTransformation(),
 			trailingIcon = {
 				IconButton(onClick = { passwordVisibility.value = !passwordVisibility.value }) {
 					Icon(
 						painter = painterResource(R.drawable.eye),
-						contentDescription = "Password Visibility",
-						tint = if (passwordVisibility.value) Color(0xFFE65100) else Color.Gray
+						contentDescription = null,
+						tint = if (passwordVisibility.value) Color.Black else Color.Gray
 					)
 				}
-			},
-			singleLine = true
+			}
 		)
 
 		OutlinedTextField(
 			value = confirmPassword.value,
 			onValueChange = { confirmPassword.value = it },
-			modifier = Modifier
-				.fillMaxWidth()
-				.padding(vertical = 8.dp)
-				.clip(RoundedCornerShape(12.dp)),
-			label = { Text(text = "Confirm Password") },
-			colors = OutlinedTextFieldDefaults.colors(
-				focusedBorderColor = Color(0xFF8D6E63),
-				focusedLabelColor = Color(0xFF8D6E63)
-			),
+			modifier = Modifier.fillMaxWidth(),
+			label = { Text("Confirm Password") },
+			singleLine = true,
 			visualTransformation = if (confirmPasswordVisibility.value) VisualTransformation.None else PasswordVisualTransformation(),
 			trailingIcon = {
-				IconButton(onClick = {
-					confirmPasswordVisibility.value = !confirmPasswordVisibility.value
-				}) {
+				IconButton(onClick = { confirmPasswordVisibility.value = !confirmPasswordVisibility.value }) {
 					Icon(
 						painter = painterResource(R.drawable.eye),
-						contentDescription = "Confirm Password Visibility",
-						tint = if (confirmPasswordVisibility.value) Color(0xFFE65100) else Color.Gray
+						contentDescription = null,
+						tint = if (confirmPasswordVisibility.value) Color.Black else Color.Gray
 					)
 				}
-			},
-			singleLine = true
+			}
 		)
-
-		Spacer(modifier = Modifier.height(24.dp))
 
 		Button(
 			onClick = {
@@ -266,43 +244,28 @@ fun RegisterContent(
 			},
 			modifier = Modifier
 				.fillMaxWidth()
-				.height(50.dp)
-				.clip(RoundedCornerShape(12.dp)),
-			enabled = email.value.isNotEmpty() && password.value.isNotEmpty() &&
-					name.value.isNotEmpty() && confirmPassword.value.isNotEmpty() &&
-					password.value == confirmPassword.value,
-			colors = ButtonDefaults.buttonColors(
-				containerColor = Color(0xFFE65100)
-			)
+				.height(50.dp),
+			enabled = name.value.isNotEmpty() &&
+					email.value.isNotEmpty() &&
+					password.value.isNotEmpty() &&
+					confirmPassword.value == password.value,
+			colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
 		) {
 			Text(
-				color = MaterialTheme.colorScheme.onPrimary,
 				text = stringResource(id = R.string.register),
+				color = Color.White,
 				fontSize = 16.sp
 			)
 		}
-
-		Spacer(modifier = Modifier.height(16.dp))
 
 		Row(
 			modifier = Modifier.fillMaxWidth(),
 			horizontalArrangement = Arrangement.SpaceEvenly
 		) {
-			SocialLoginButton(
-				icon = R.drawable.ic_google,
-				onClick = onGoogleSignInClicked
-			)
-			SocialLoginButton(
-				icon = R.drawable.ic_facebook,
-				onClick = { /* Handle Facebook registration */ }
-			)
-			SocialLoginButton(
-				icon = R.drawable.ic_twitter,
-				onClick = { /* Handle Twitter/X registration */ }
-			)
+			SocialLoginButton(R.drawable.ic_google, onGoogleSignInClicked) // Google button
+			SocialLoginButton(R.drawable.ic_facebook) { /* TODO */ }
+			SocialLoginButton(R.drawable.ic_twitter) { /* TODO */ }
 		}
-
-		Spacer(modifier = Modifier.height(16.dp))
 
 		Text(
 			text = stringResource(id = R.string.alread_have_an_account),
@@ -314,6 +277,7 @@ fun RegisterContent(
 	}
 }
 
+
 @Composable
 fun SocialLoginButton(
 	icon: Int,
@@ -324,7 +288,7 @@ fun SocialLoginButton(
 		modifier = Modifier
 			.size(48.dp)
 			.clip(RoundedCornerShape(12.dp))
-			.background(Color(0xFFE65100).copy(alpha = 0.8f))
+			.background(Color(0xFFFFFFFF).copy(alpha = 0.8f))
 	) {
 		Icon(
 			painter = painterResource(id = icon),

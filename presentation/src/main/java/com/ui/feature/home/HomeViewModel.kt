@@ -1,99 +1,52 @@
 package com.ui.feature.home
 
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.domain.model.Product
-import com.domain.network.ResultWrapper
-import com.domain.usecase.GetCategoriesUseCase
-import com.domain.usecase.GetProductUseCase
-import kotlinx.coroutines.async
+import com.domain.model.Trip
+import com.domain.usecase.GetAllTripsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class HomeViewModel(
-	private val getProductUseCase: GetProductUseCase,
-	private val categoryUseCase: GetCategoriesUseCase
+	private val getAllTripsUseCase: GetAllTripsUseCase,
 ) : ViewModel() {
 
 	private val _uiState = MutableStateFlow<HomeScreenUIEvents>(HomeScreenUIEvents.Loading)
 	val uiState = _uiState.asStateFlow()
 
+	private val _trips = MutableStateFlow<List<Trip>>(emptyList())
+	val trips = _trips.asStateFlow()
+
+	private var hasLoadedTrips = false // Add this flag
+
 	init {
-		getAllProducts()
+		if (!hasLoadedTrips) {
+			loadTrips()
+		}
 	}
 
-	private fun getAllProducts() {
+	fun loadTrips() {
 		viewModelScope.launch {
 			_uiState.value = HomeScreenUIEvents.Loading
-			/*****
-			 *  -- To Launch all request's at the same time to get data from server --
-			 * async{} will launch all the request's in parallel at the same time
-			 * and await() will be wait for the every request result response
-			 * using this approach our network calling will be fast and it will take less time to
-			 * show the data on screen to user
-			 */
-			val featured = async {
-				getProducts(1)
-			}
-			val popularProducts = async {
-				getProducts(2)
-			}
-
-			val categories = async {
-				getCategory()
-			}
-
-			val featuredResponse = featured.await()
-			val popularProductsResponse = popularProducts.await()
-			val categoriesResponse = categories.await()
-
-			if (featuredResponse.isEmpty() && popularProductsResponse.isEmpty() && categoriesResponse.isNotEmpty()) {
-				_uiState.value = HomeScreenUIEvents.Error("Failed to load products")
-				return@launch
-			}
-			_uiState.value = HomeScreenUIEvents.Success(
-				featuredResponse,
-				popularProductsResponse,
-				categoriesResponse
-			)
-		}
-	}
-
-	private suspend fun getCategory(): List<String> {
-		categoryUseCase.execute().let { result ->
-			when (result) {
-				is ResultWrapper.Success -> {
-					return (result).value.categories.map { it.title }
-				}
-
-				is ResultWrapper.Failure -> {
-					return emptyList()
-				}
-			}
-		}
-	}
-
-	private suspend fun getProducts(category: Int?): List<Product> {
-		getProductUseCase.execute(category).let { result ->
-			when (result) {
-				is ResultWrapper.Success -> {
-					return (result).value.products
-				}
-				is ResultWrapper.Failure -> {
-					return emptyList()
-				}
+			try {
+				val result = getAllTripsUseCase()
+				_trips.value = result
+				_uiState.value = HomeScreenUIEvents.Success(
+//					featured = emptyList(), // Adjust as needed
+//					popularProducts = emptyList(), // Adjust as needed
+					categories = emptyList() // Adjust as needed
+				)
+				hasLoadedTrips = true
+			} catch (e: Exception) {
+				_uiState.value = HomeScreenUIEvents.Error(e.message ?: "Unknown error")
 			}
 		}
 	}
 }
-
 sealed class HomeScreenUIEvents {
 	data object Loading : HomeScreenUIEvents()
 	data class Success(
-		val featured: List<Product>,
-		val popularProducts: List<Product>,
 		val categories: List<String>
 	) : HomeScreenUIEvents()
 	data class Error(val message: String) : HomeScreenUIEvents()
